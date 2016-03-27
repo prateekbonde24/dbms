@@ -1,0 +1,72 @@
+package tests;
+
+import java.io.IOException;
+
+import bufmgr.PageNotReadException;
+import global.AttrType;
+import global.GlobalConst;
+import heap.Heapfile;
+import heap.InvalidTupleSizeException;
+import heap.InvalidTypeException;
+import heap.Scan;
+import heap.Tuple;
+import index.IndexException;
+import iterator.CondExpr;
+import iterator.FldSpec;
+import iterator.Iterator;
+import iterator.JoinsException;
+import iterator.LowMemException;
+import iterator.PredEvalException;
+import iterator.SortException;
+import iterator.TupleUtilsException;
+import iterator.UnknowAttrType;
+import iterator.UnknownKeyTypeException;
+
+public class IEJoin {
+
+	 private AttrType      _in1[],  _in2[];
+	  private   int        in1_len, in2_len;
+	  private   Iterator  outer;
+	  private   short t2_str_sizescopy[];
+	  private   CondExpr OutputFilter[];
+	  private   CondExpr RightFilter[];
+	  private   int        n_buf_pgs;        // # of buffer pages available.
+	  private   boolean        done,         // Is the join complete
+	    get_from_outer;                 // if TRUE, a tuple is got from outer
+	  private   Tuple     outer_tuple, inner_tuple;
+	  private   Tuple     Jtuple;           // Joined tuple
+	  private   FldSpec   perm_mat[];
+	  private   int        nOutFlds;
+	  private   Heapfile  hf;
+	  private   Scan      inner;
+	  
+	  
+	public IEJoin(AttrType[] _in1, AttrType[] _in2, int in1_len, int in2_len, Iterator outer, short[] t2_str_sizescopy,
+			CondExpr[] outputFilter, CondExpr[] rightFilter, int n_buf_pgs, boolean done, boolean get_from_outer,
+			Tuple outer_tuple, Tuple inner_tuple, Tuple jtuple, FldSpec[] perm_mat, int nOutFlds, Heapfile hf,
+			Scan inner) {
+		super();
+		this._in1 = _in1;
+		this._in2 = _in2;
+		this.in1_len = in1_len;
+		this.in2_len = in2_len;
+		this.outer = outer;
+		this.t2_str_sizescopy = t2_str_sizescopy;
+		OutputFilter = outputFilter;
+		RightFilter = rightFilter;
+		this.n_buf_pgs = n_buf_pgs;
+		this.done = done;
+		this.get_from_outer = get_from_outer;
+		this.outer_tuple = outer_tuple;
+		this.inner_tuple = inner_tuple;
+		Jtuple = jtuple;
+		this.perm_mat = perm_mat;
+		this.nOutFlds = nOutFlds;
+		this.hf = hf;
+		this.inner = inner;
+	}
+	  
+	  
+
+
+}

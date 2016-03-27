@@ -1,0 +1,984 @@
+package tests;
+
+//originally from : joins.C
+
+import iterator.*;
+
+import heap.*;
+
+import global.*;
+
+import index.*;
+
+import java.io.*;
+
+import java.util.*;
+
+import java.lang.*;
+
+import diskmgr.*;
+
+import bufmgr.*;
+
+import btree.*;
+
+import catalog.*;
+
+/**
+ * 
+ * Here is the implementation for the tests. There are N tests performed.
+ * 
+ * We start off by showing that each operator works on its own.
+ * 
+ * Then more complicated trees are constructed.
+ * 
+ * As a nice feature, we allow the user to specify a selection condition.
+ * 
+ * We also allow the user to hardwire trees together.
+ * 
+ */
+
+// Define the schema for S
+
+class S {
+
+	public int field1;
+
+	public int field2;
+
+	public int field3;
+
+	public int field4;
+
+}
+
+	public S(int f1, int f2, int f3, int f4) {
+
+		field1 = f1;
+
+		field2 = f2;
+
+		field3 = f3;
+
+		field4 = f4;
+
+	}
+
+}
+
+// Define the schema for R
+
+class R {
+
+	public int field1;
+
+	public int field2;
+
+	public int field3;
+
+	public int field4;
+
+	public R(int f1, int f2, int f3, int f4) {
+
+		field1 = f1;
+
+		field2 = f2;
+
+		field3 = f3;
+
+		field4 = f4;
+
+	}
+
+}
+
+class JoinsDriver2 implements GlobalConst {
+
+	private boolean OK = true;
+
+	private boolean FAIL = false;
+
+	private Vector<S> s;
+
+	private Vector<R> r;
+
+	AttrType[] Rtypes = new AttrType[4];
+
+	AttrType[] Stypes = new AttrType[4];
+
+	/**
+	 * Constructor
+	 * 
+	 */
+
+	public JoinsDriver2() {
+
+		// build S, R table
+
+		s = new Vector<S>();
+
+		r = new Vector<R>();
+
+		r.addElement(new R(1262390, 164, 126239000, 1262391));
+
+		r.addElement(new R(126197, 964, 12619700, 126198));
+
+		r.addElement(new R(143070, 531, 14307000, 143071));
+
+		r.addElement(new R(117047, 706, 11704700, 117037));
+
+		r.addElement(new R(1538320, 308, 153832000, 1538321));
+
+		r.addElement(new R(1473733, 961, 147373300, 1473734));
+
+		r.addElement(new R(371779, 43, 37177900, 371780));
+
+		r.addElement(new R(1502865, 19, 150286500, 1502866));
+
+		r.addElement(new R(509760, 188, 50976000, 509761));
+
+		r.addElement(new R(396655, 319, 39665500, 396656));
+
+		s.addElement(new S(1056377, 191, 105637700, 1056378));
+
+		s.addElement(new S(1489895, 769, 148989500, 1489896));
+
+		s.addElement(new S(1807144, 694, 180714400, 1807145));
+
+		s.addElement(new S(1616340, 332, 161634000, 1616341));
+
+		s.addElement(new S(883623, 51, 88362300, 883624));
+
+		s.addElement(new S(85537, 42, 8553700, 85538));
+
+		s.addElement(new S(1444902, 625, 144490200, 1444903));
+
+		s.addElement(new S(913106, 710, 91310600, 913107));
+
+		s.addElement(new S(1943915, 187, 194391500, 1943916));
+
+		s.addElement(new S(92259, 597, 9225900, 92260));
+
+		s.addElement(new S(1179958, 515, 117995800, 1179959));
+
+		s.addElement(new S(1933427, 575, 193342700, 1933428));
+
+		s.addElement(new S(554140, 473, 55414000, 554141));
+
+		s.addElement(new S(1532107, 398, 153210700, 1532108));
+
+		s.addElement(new S(361601, 229, 36160100, 361602));
+
+		s.addElement(new S(1946226, 740, 194622600, 1946227));
+
+		s.addElement(new S(1080201, 276, 108020100, 1080202));
+
+		s.addElement(new S(1809863, 303, 180986300, 1809864));
+
+		s.addElement(new S(943219, 969, 94321900, 943220));
+
+		s.addElement(new S(1000919, 486, 100091900, 1000920));
+
+		s.addElement(new S(919391, 264, 91939100, 919392));
+
+		s.addElement(new S(37753, 302, 3775300, 37754));
+
+		s.addElement(new S(589486, 234, 58948600, 589476));
+
+		s.addElement(new S(1607756, 593, 160775600, 1607757));
+
+		s.addElement(new S(416178, 57, 41617800, 416179));
+
+		// code to build relations S,R
+
+		boolean status = OK;
+
+		int nums = 25;
+
+		int nums_attrs = 4;
+
+		int numr = 10;
+
+		int numr_attrs = 4;
+
+		String dbpath = "/tmp/" + System.getProperty("user.name") + ".minibase.jointest2db";
+
+		String logpath = "/tmp/" + System.getProperty("user.name") + ".joinlog";
+
+		String remove_cmd = "/bin/rm -rf ";
+
+		String remove_logcmd = remove_cmd + logpath;
+
+		String remove_dbcmd = remove_cmd + dbpath;
+
+		String remove_joincmd = remove_cmd + dbpath;
+
+		try {
+
+			Runtime.getRuntime().exec(remove_logcmd);
+
+			Runtime.getRuntime().exec(remove_dbcmd);
+
+			Runtime.getRuntime().exec(remove_joincmd);
+
+		}
+
+		catch (IOException e) {
+
+			System.err.println("" + e);
+
+		}
+
+		/*
+		 * 
+		 * ExtendedSystemDefs extSysDef =
+		 * 
+		 * new ExtendedSystemDefs( "/tmp/minibase.jointestdb", "/tmp/joinlog",
+		 * 
+		 * 1000,500,200,"Clock");
+		 * 
+		 */
+
+		SystemDefs sysdef = new SystemDefs(dbpath, 1000, NUMBUF, "Clock");
+
+		// creating the r relation
+
+		Rtypes[0] = new AttrType(AttrType.attrInteger);
+
+		Rtypes[1] = new AttrType(AttrType.attrInteger);
+
+		Rtypes[2] = new AttrType(AttrType.attrInteger);
+
+		Rtypes[3] = new AttrType(AttrType.attrInteger);
+
+		// SOS
+
+		short[] Ssizes = new short[1];
+
+		Ssizes[0] = 30; // first elt. is 30
+
+		Tuple t = new Tuple();
+
+		try {
+
+			t.setHdr((short) 4, Stypes, Ssizes);
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** error in Tuple.setHdr() ***");
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		int size = t.size();
+
+		// inserting the tuple into file "sailors"
+
+		RID rid;
+
+		Heapfile f = null;
+
+		try {
+
+			f = new Heapfile("s.in");
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** error in Heapfile constructor ***");
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		t = new Tuple(size);
+
+		try {
+
+			t.setHdr((short) 4, Stypes, Ssizes);
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** error in Tuple.setHdr() ***");
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		for (int i = 0; i < nums; i++) {
+
+			try {
+
+				t.setIntFld(1, (s.elementAt(i).field1));
+
+				t.setIntFld(2, (s.elementAt(i).field2));
+
+				t.setIntFld(3, (s.elementAt(i).field3));
+
+				t.setIntFld(4, (s.elementAt(i).field4));
+
+			}
+
+			catch (Exception e) {
+
+				System.err.println("*** Heapfile error in Tuple.setStrFld() ***");
+
+				status = FAIL;
+
+				e.printStackTrace();
+
+			}
+
+			try {
+
+				rid = f.insertRecord(t.returnTupleByteArray());
+
+			}
+
+			catch (Exception e) {
+
+				System.err.println("*** error in Heapfile.insertRecord() ***");
+
+				status = FAIL;
+
+				e.printStackTrace();
+
+			}
+
+		}
+
+		if (status != OK) {
+
+			// bail out
+
+			System.err.println("*** Error creating relation for s");
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+		// creating the s relation
+
+		AttrType[] Stypes = new AttrType[4];
+
+		Stypes[0] = new AttrType(AttrType.attrInteger);
+
+		Stypes[1] = new AttrType(AttrType.attrInteger);
+
+		Stypes[2] = new AttrType(AttrType.attrInteger);
+
+		Stypes[3] = new AttrType(AttrType.attrInteger);
+
+		// SOS
+
+		short[] Rsizes = new short[1];
+
+		Rsizes[0] = 30; // first elt. is 30
+
+		// Tuple t = new Tuple();
+
+		try {
+
+			t.setHdr((short) 4, Rtypes, Rsizes);
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** error in Tuple.setHdr() ***");
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		size = t.size();
+
+		// inserting the tuple into file r
+
+		f = null;
+
+		try {
+
+			f = new Heapfile("r.in");
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** error in Heapfile constructor ***");
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		t = new Tuple(size);
+
+		try {
+
+			t.setHdr((short) 4, Rtypes, Rsizes);
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** error in Tuple.setHdr() ***");
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		for (int i = 0; i < numr; i++) {
+
+			try {
+
+				t.setIntFld(1, ((R) r.elementAt(i)).field1);
+
+				t.setIntFld(2, ((R) r.elementAt(i)).field2);
+
+				t.setIntFld(3, ((R) r.elementAt(i)).field3);
+
+				t.setIntFld(4, ((R) r.elementAt(i)).field4);
+
+			}
+
+			catch (Exception e) {
+
+				System.err.println("*** Heapfile error in Tuple.setStrFld() ***");
+
+				status = FAIL;
+
+				e.printStackTrace();
+
+			}
+
+			try {
+
+				rid = f.insertRecord(t.returnTupleByteArray());
+
+			}
+
+			catch (Exception e) {
+
+				System.err.println("*** error in Heapfile.insertRecord() ***");
+
+				status = FAIL;
+
+				e.printStackTrace();
+
+			}
+
+		}
+
+		if (status != OK) {
+
+			// bail out
+
+			System.err.println("*** Error creating relation for r");
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+	}
+
+	private void Query1_CondExpr(CondExpr[] expr) {
+
+		expr[0].next = null;
+
+		expr[0].op = new AttrOperator(AttrOperator.aopLT);
+
+		expr[0].type1 = new AttrType(AttrType.attrSymbol);
+
+		expr[0].type2 = new AttrType(AttrType.attrSymbol);
+
+		expr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), 3);
+
+		expr[0].operand2.symbol = new FldSpec(new RelSpec(RelSpec.innerRel), 3);
+
+		expr[1] = null;
+
+	}
+
+	// Edit part two
+
+	public void Query1() {
+
+		System.out.print("**********************Query1a starting *********************\n");
+
+		boolean status = OK;
+
+		System.out.print
+
+		("Query: Find the names of sailors who have reserved "
+
+				+ "a red boat\n"
+
+				+ "       and return them in alphabetical order.\n\n"
+
+				+ "  SELECT   S.sname\n"
+
+				+ "  FROM     Sailors S, Boats B, Reserves R\n"
+
+				+ "  WHERE    S.sid = R.sid AND R.bid = B.bid AND B.color = 'red'\n"
+
+				+ "  ORDER BY S.sname\n"
+
+				+ "Plan used:\n"
+
+				+ " Sort (Pi(sname) (Sigma(B.color='red')  "
+
+				+ "|><|  Pi(sname, bid) (S  |><|  R)))\n\n"
+
+				+ "(Tests File scan, Index scan ,Projection,  index selection,\n "
+
+				+ "sort and simple nested-loop join.)\n\n");
+
+		// Build Index first
+
+		IndexType b_index = new IndexType(IndexType.B_Index);
+
+		CondExpr[] outFilter = new CondExpr[2];
+
+		outFilter[0] = new CondExpr();
+
+		outFilter[1] = new CondExpr();
+
+		Query1_CondExpr(outFilter);
+
+		Tuple t = new Tuple();
+
+		t = null;
+
+		AttrType[] Stypes = {
+
+				new AttrType(AttrType.attrInteger),
+
+				new AttrType(AttrType.attrString),
+
+				new AttrType(AttrType.attrInteger),
+
+				new AttrType(AttrType.attrReal)
+
+		};
+
+		AttrType[] Stypes2 = {
+
+				new AttrType(AttrType.attrInteger)
+
+		};
+
+		short[] Ssizes = new short[1];
+
+		Ssizes[0] = 30;
+
+		AttrType[] Rtypes = {
+
+				new AttrType(AttrType.attrInteger),
+
+				new AttrType(AttrType.attrInteger),
+
+				new AttrType(AttrType.attrInteger),
+
+				new AttrType(AttrType.attrInteger),
+
+		};
+
+		short[] Rsizes = new short[1];
+
+		Rsizes[0] = 15;
+
+		short[] Jsizes = new short[1];
+
+		Jsizes[0] = 30;
+
+		FldSpec[] proj1 = {
+
+				new FldSpec(new RelSpec(RelSpec.outer), 1),
+
+				new FldSpec(new RelSpec(RelSpec.innerRel), 1)
+
+		}; // S.1, R.1
+
+		AttrType[] Jtype = new AttrType[2];
+
+		Jtype[0] = new AttrType(AttrType.attrInteger);
+
+		Jtype[1] = new AttrType(AttrType.attrInteger);
+
+		FldSpec[] Sprojection = {
+
+				new FldSpec(new RelSpec(RelSpec.outer), 1),
+
+				new FldSpec(new RelSpec(RelSpec.outer), 2),
+
+				// new FldSpec(new RelSpec(RelSpec.outer), 3),
+
+				// new FldSpec(new RelSpec(RelSpec.outer), 4)
+
+		};
+
+		CondExpr[] selects = new CondExpr[1];
+
+		selects[0] = null;
+
+		// IndexType b_index = new IndexType(IndexType.B_Index);
+
+		iterator.Iterator am = null;
+
+		// _______________________________________________________________
+
+		// *******************create an scan on the heapfile**************
+
+		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+		// create a tuple of appropriate size
+
+		Tuple tt = new Tuple();
+
+		try {
+
+			tt.setHdr((short) 4, Stypes, Ssizes);
+
+		}
+
+		catch (Exception e) {
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		int sizett = tt.size();
+
+		tt = new Tuple(sizett);
+
+		try {
+
+			tt.setHdr((short) 4, Stypes, Ssizes);
+
+		}
+
+		catch (Exception e) {
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		Heapfile f = null;
+
+		try {
+
+			f = new Heapfile("s.in");
+
+		}
+
+		catch (Exception e) {
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		Scan scan = null;
+
+		try {
+
+			scan = new Scan(f);
+
+		}
+
+		catch (Exception e) {
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+		// create the index file
+
+		BTreeFile btf = null;
+
+		try {
+
+			btf = new BTreeFile("BTreeIndex", AttrType.attrInteger, 4, 1);
+
+		}
+
+		catch (Exception e) {
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+		RID rid = new RID();
+
+		int key = 0;
+
+		Tuple temp = null;
+
+		try {
+
+			temp = scan.getNext(rid);
+
+		}
+
+		catch (Exception e) {
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		while (temp != null) {
+
+			tt.tupleCopy(temp);
+
+			try {
+
+				key = tt.getIntFld(1);
+
+			}
+
+			catch (Exception e) {
+
+				status = FAIL;
+
+				e.printStackTrace();
+
+			}
+
+			try {
+
+				btf.insert(new IntegerKey(key), rid);
+
+			}
+
+			catch (Exception e) {
+
+				status = FAIL;
+
+				e.printStackTrace();
+
+			}
+
+			try {
+
+				temp = scan.getNext(rid);
+
+			}
+
+			catch (Exception e) {
+
+				status = FAIL;
+
+				e.printStackTrace();
+
+			}
+
+		}
+
+		// close the file scan
+
+		scan.closescan();
+
+		// _______________________________________________________________
+
+		// *******************close an scan on the heapfile**************
+
+		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+		System.out.print("After Building btree index on sailors.sid.\n\n");
+
+		try {
+
+			am = new IndexScan(b_index, "s.in",
+
+					"BTreeIndex", Stypes, Ssizes, 4, 2,
+
+					Sprojection, null, 1, false);
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** Error creating scan for Index scan");
+
+			System.err.println("" + e);
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+		NestedLoopsJoins nlj = null;
+
+		try {
+
+			nlj = new NestedLoopsJoins(Stypes2, 2, Ssizes,
+
+					Rtypes, 3, Rsizes,
+
+					10,
+
+					am, "r.in",
+
+					outFilter, null, proj1, 2);
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("*** Error preparing for nested_loop_join");
+
+			System.err.println("" + e);
+
+			e.printStackTrace();
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+		QueryCheck qcheck1 = new QueryCheck(7);
+
+		t = null;
+
+		try {
+
+			while ((t = nlj.get_next()) != null) {
+
+				t.print(Jtype);
+
+				qcheck1.Check(t);
+
+			}
+
+		}
+
+		catch (Exception e) {
+
+			System.err.println("" + e);
+
+			e.printStackTrace();
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+		// qcheck1.report(1);
+
+		System.out.println("\n");
+
+		try {
+
+			nlj.close();
+
+		}
+
+		catch (Exception e) {
+
+			status = FAIL;
+
+			e.printStackTrace();
+
+		}
+
+		if (status != OK) {
+
+			// bail out
+
+			Runtime.getRuntime().exit(1);
+
+		}
+
+	}
+
+	private void Disclaimer() {
+
+		System.out.print("\n\nAny resemblance of persons in this database to"
+
+				+ " people living or dead\nis purely coincidental. The contents of "
+
+				+ "this database do not reflect\nthe views of the University,"
+
+				+ " the Computer  Sciences Department or the\n"
+
+				+ "developers...\n\n");
+
+	}
+
+	public boolean runTests() {
+
+		Disclaimer();
+
+		Query1();
+
+		System.out.print("Finished Task 1a" + "\n");
+
+		return true;
+
+	}
+
+}
+
+public class JoinTest2
+
+{
+
+	public static void main(String argv[])
+
+	{
+
+		boolean sortstatus;
+
+		// SystemDefs global = new SystemDefs("bingjiedb", 100, 70, null);
+
+		// JavabaseDB.openDB("/tmp/nwangdb", 5000);
+
+		JoinsDriver2 jjoin = new JoinsDriver2();
+
+		sortstatus = jjoin.runTests();
+
+		if (sortstatus != true) {
+
+			System.out.println("Error ocurred during join tests");
+
+		}
+
+		else {
+
+			System.out.println("join tests completed successfully");
+
+		}
+
+	}
+
+}

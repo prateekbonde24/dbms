@@ -1,0 +1,1027 @@
+package tests;
+//originally from : joins.C
+
+import iterator.*;
+
+import heap.*;
+import global.*;
+import index.*;
+import java.io.*;
+import java.util.*;
+import java.lang.*;
+import diskmgr.*;
+import bufmgr.*;
+import btree.*; 
+import catalog.*;
+
+/**
+   Here is the implementation for the tests. There are N tests performed.
+   We start off by showing that each operator works on its own.
+   Then more complicated trees are constructed.
+   As a nice feature, we allow the user to specify a selection condition.
+   We also allow the user to hardwire trees together.
+*/
+
+//Define the Sailor schema
+class S {
+	  public int s1;
+	  public int s2;
+	  public int s3;
+	  public int s4;
+	  
+	  public S (int _s1, int _s2, int _s3, int _s4) {
+	    s1  = _s1;
+	    s2  = _s2;
+	    s3 = _s3;
+	    s4 = _s4;
+	  }
+
+}
+
+class Q {
+	  public int    q1;
+	  public int q2;
+	  public int q3;
+	  public int q4;
+	  
+	  public Q (int _q1, int _q2, int _q3, int _q4) {
+	    q1    = _q1;
+	    q2  = _q2;
+	    q3 = _q3;
+	    q4    = _q4;
+	  }
+
+}
+//Define the Boat schema
+
+
+//Define the Reserves schema
+class R {
+	  public int r1;
+	  public int r2;
+	  public int r3;
+	  public int r4;
+	  
+	  public R (int _r1, int _r2, int _r3, int _r4) {
+	    r1   = _r1;
+	    r2 = _r2;
+	    r3 = _r3;
+	    r4 = _r4;
+	  }
+
+}
+
+class JoinsDriver implements GlobalConst {
+  
+  private boolean OK = true;
+  private boolean FAIL = false;
+  private Vector<S> arrayS;
+  private Vector arrayQ;
+  private Vector arrayR;
+  private int projcol1;
+  private int projcol2;
+  private int joincol1;
+  private int joincol2;
+  private int joincol22;
+  private int joincol21;
+  private int condition_code2;
+  private int condition_code;
+  private String condition;
+  private String table1;
+  private String table2;
+  private int relationFlag = 0;
+  private int relationFlag1 = 0;
+  /** Constructor
+   */
+  public JoinsDriver() {
+	  String line;
+	String fileQ = "/home/pratik/workspace3/Project/src/Q.txt";
+	String fileR = "/home/pratik/workspace3/Project/src/R.txt";
+	String fileS = "/home/pratik/workspace3/Project/src/S.txt";
+	arrayQ  = new Vector<Q>();
+	arrayR    = new Vector<R>();
+	arrayS = new Vector<S>();
+	
+	try
+	{
+	BufferedReader br = new BufferedReader(new FileReader(fileQ));
+	line = br.readLine();
+	String iptypeq[] = line.split(",");
+	int nq=iptypeq.length;
+	int i;
+	int temp[]=new int[nq];
+	while((line = br.readLine())!=null)
+	{
+  	String arrq[]=line.split(",");
+	for(i=0;i<nq-1;i++)
+	{
+	temp[i]=Integer.parseInt(arrq[i]);
+	}
+	arrayQ.add(new Q(temp[0], temp[1], temp[2], temp[3]));
+	
+	}
+	br.close();
+	
+	BufferedReader br1 = new BufferedReader(new FileReader(fileR));
+	line = br1.readLine();
+	String iptypee[] = line.split(",");
+	int nr=iptypee.length;
+	while((line = br1.readLine())!=null)
+	{
+  	String arrr[]=line.split(",");
+	for(i=0;i<nq-1;i++)
+	{
+	temp[i]=Integer.parseInt(arrr[i]);
+	}
+	arrayR.add(new R(temp[0], temp[1], temp[2], temp[3]));
+	}
+	br1.close();
+
+	BufferedReader br2 = new BufferedReader(new FileReader(fileS));
+	line = br2.readLine();
+	String iptypes[] = line.split(",");
+	int ns=iptypes.length;
+	while((line = br2.readLine())!=null)
+	{
+  	String arrs[]=line.split(",");
+	for(i=0;i<nq-1;i++)
+	{
+	temp[i]=Integer.parseInt(arrs[i]);
+	}
+	arrayS.add(new S(temp[0], temp[1], temp[2], temp[3]));
+	}
+	br2.close();
+	}
+	catch(Exception e)
+	{
+	e.printStackTrace();
+	}
+
+    
+
+    //CHANGES HERE
+    boolean status = OK;
+    int numS = arrayS.size();
+    int numS_attrs = 4;
+    int numR = arrayR.size();
+    int numR_attrs = 4;
+    int numQ = arrayQ.size();
+    int numQ_attrs = 4;
+   
+    
+    String dbpath = "/tmp/"+System.getProperty("user.name")+".minibase.jointestdb"; 
+    String logpath = "/tmp/"+System.getProperty("user.name")+".joinlog";
+
+    String remove_cmd = "/bin/rm -rf ";
+    String remove_logcmd = remove_cmd + logpath;
+    String remove_dbcmd = remove_cmd + dbpath;
+    String remove_joincmd = remove_cmd + dbpath;
+
+    try {
+      Runtime.getRuntime().exec(remove_logcmd);
+      Runtime.getRuntime().exec(remove_dbcmd);
+      Runtime.getRuntime().exec(remove_joincmd);
+    }
+    catch (IOException e) {
+      System.err.println (""+e);
+    }
+
+   
+   
+
+    SystemDefs sysdef = new SystemDefs( dbpath, 1000, NUMBUF, "Clock" );
+    
+    // creating the sailors relation
+    //CHANGES HERE
+    AttrType [] Stypes = new AttrType[4];
+    Stypes[0] = new AttrType (AttrType.attrInteger);
+    Stypes[1] = new AttrType (AttrType.attrInteger);
+    Stypes[2] = new AttrType (AttrType.attrInteger);
+    Stypes[3] = new AttrType (AttrType.attrInteger);
+
+    //SOS
+    short [] Ssizes = new short [1];
+    Ssizes[0] = 30; //first elt. is 30
+    
+    Tuple t = new Tuple();
+    try {
+      t.setHdr((short) 4,Stypes, Ssizes);
+    }
+    catch (Exception e) {
+      System.err.println("*** error in Tuple.setHdr() ***");
+      status = FAIL;
+      e.printStackTrace();
+    }
+    
+    int size = t.size();
+    
+    // inserting the tuple into file "sailors"
+    RID             rid;
+    Heapfile        f = null;
+    try {
+      f = new Heapfile("sailors.in");
+    }
+    catch (Exception e) {
+      System.err.println("*** error in Heapfile constructor ***");
+      status = FAIL;
+      e.printStackTrace();
+    }
+    
+    t = new Tuple(size);
+    try {
+      t.setHdr((short) 4, Stypes, Ssizes);
+    }
+    catch (Exception e) {
+      System.err.println("*** error in Tuple.setHdr() ***");
+      status = FAIL;
+      e.printStackTrace();
+    }
+    
+    for (int i=0; i<numS; i++) {
+      try {
+    	  //CHANGES HERE
+	t.setIntFld(1, ((S)arrayS.elementAt(i)).s1);
+	t.setIntFld(2, ((S)arrayS.elementAt(i)).s2);
+	t.setIntFld(3, ((S)arrayS.elementAt(i)).s3);
+	t.setIntFld(4, ((S)arrayS.elementAt(i)).s4);
+      }
+      catch (Exception e) {
+	System.err.println("*** Heapfile error in Tuple.setStrFld() ***");
+	status = FAIL;
+	e.printStackTrace();
+      }
+      
+      try {
+	rid = f.insertRecord(t.returnTupleByteArray());
+      }
+      catch (Exception e) {
+	System.err.println("*** error in Heapfile.insertRecord() ***");
+	status = FAIL;
+	e.printStackTrace();
+      }      
+    }
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error creating relation for sailors");
+      Runtime.getRuntime().exit(1);
+    }
+    
+  
+    //CHANGES HERE
+    AttrType [] Rtypes = new AttrType[4];
+    Rtypes[0] = new AttrType (AttrType.attrInteger);
+    Rtypes[1] = new AttrType (AttrType.attrInteger);
+    Rtypes[2] = new AttrType (AttrType.attrInteger);
+    Rtypes[3] = new AttrType (AttrType.attrInteger);
+
+    short [] Rsizes = new short [1];
+    Rsizes[0] = 15; 
+    t = new Tuple();
+    try {
+      t.setHdr((short) 4,Rtypes, Rsizes);
+    }
+    catch (Exception e) {
+      System.err.println("*** error in Tuple.setHdr() ***");
+      status = FAIL;
+      e.printStackTrace();
+    }
+    
+    size = t.size();
+    
+    // inserting the tuple into file "reserves"
+    //RID             rid;
+    f = null;
+    try {
+      f = new Heapfile("reserves.in");
+    }
+    catch (Exception e) {
+      System.err.println("*** error in Heapfile constructor ***");
+      status = FAIL;
+      e.printStackTrace();
+    }
+    
+    t = new Tuple(size);
+    try {
+      t.setHdr((short) 4, Rtypes, Rsizes);
+    }
+    catch (Exception e) {
+      System.err.println("*** error in Tuple.setHdr() ***");
+      status = FAIL;
+      e.printStackTrace();
+    }
+    
+    for (int i=0; i<numR; i++) {
+      try {
+    	  //CHANGES HERE
+	t.setIntFld(1, ((R)arrayR.elementAt(i)).r1);
+	t.setIntFld(2, ((R)arrayR.elementAt(i)).r2);
+	t.setIntFld(3, ((R)arrayR.elementAt(i)).r3);
+	t.setIntFld(3, ((R)arrayR.elementAt(i)).r4);
+      }
+      catch (Exception e) {
+	System.err.println("*** error in Tuple.setStrFld() ***");
+	status = FAIL;
+	e.printStackTrace();
+      }      
+      
+      try {
+	rid = f.insertRecord(t.returnTupleByteArray());
+      }
+      catch (Exception e) {
+	System.err.println("*** error in Heapfile.insertRecord() ***");
+	status = FAIL;
+	e.printStackTrace();
+      }      
+    }
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error creating relation for reserves");
+      Runtime.getRuntime().exit(1);
+    }
+    
+  }
+  
+  public boolean runTests() {
+    
+    Disclaimer();
+    /*Query1();
+    
+    Query2();
+    Query3();
+    
+   
+    Query4();
+    Query5();
+    Query6();*/
+    //Query1();
+    //Query1a();
+    Query1b();
+    
+    
+    System.out.print ("Finished joins testing"+"\n");
+   
+    
+    return true;
+  }
+  private void query1b2_CondExpr(CondExpr[] expr) {
+	  if(condition_code2 == 1)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopLT);
+	    else if(condition_code2 == 2)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopLE);
+	    else if(condition_code2 == 3)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopGE);
+	    else if(condition_code2 == 4)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopGT);
+	    expr[0].next  = null;
+	    expr[0].type1 = new AttrType(AttrType.attrSymbol);
+	
+	    expr[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),joincol21);
+	    if (relationFlag1 == 1)
+	    {
+		    expr[0].type2 = new AttrType(AttrType.attrSymbol);
+		    relationFlag1 = 0;
+		    expr[0].operand2.symbol = new FldSpec (new RelSpec(RelSpec.outer),joincol22);
+	    }
+	    else
+	    {
+	    	
+	    	expr[0].type2 = new AttrType(AttrType.attrInteger);
+	    	expr[0].operand2.integer = joincol22;
+	    }
+	    expr[1]=null;
+  }
+  private void query1bb_CondExpr(CondExpr[] expr,CondExpr[] expr2) {
+
+	    expr[0].next  = null;
+	    if(condition_code == 1)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopLT);
+	    else if(condition_code == 2)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopLE);
+	    else if(condition_code == 3)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopGE);
+	    else if(condition_code == 4)
+	    	expr[0].op    = new AttrOperator(AttrOperator.aopGT);
+	    expr[0].type1 = new AttrType(AttrType.attrSymbol);
+	    expr[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),joincol1);
+
+	    if (relationFlag == 1)
+	    {
+		    expr[0].type2 = new AttrType(AttrType.attrSymbol);
+		    relationFlag = 0;
+		    expr[0].operand2.symbol = new FldSpec (new RelSpec(RelSpec.outer),joincol2);
+	    }
+	    else
+	    {
+	    	
+	    	expr[0].type2 = new AttrType(AttrType.attrInteger);
+	    	expr[0].operand2.integer = joincol2;
+	    }
+	    expr[1]=null;
+
+	    if(condition_code2 == 1)
+	    	expr2[0].op    = new AttrOperator(AttrOperator.aopLT);
+	    else if(condition_code2 == 2)
+	    	expr2[0].op    = new AttrOperator(AttrOperator.aopLE);
+	    else if(condition_code2 == 3)
+	    	expr2[0].op    = new AttrOperator(AttrOperator.aopGE);
+	    else if(condition_code2 == 4)
+	    	expr2[0].op    = new AttrOperator(AttrOperator.aopGT);
+	    expr2[0].next  = null;
+	    expr2[0].type1 = new AttrType(AttrType.attrSymbol);
+
+	    expr2[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),joincol21);
+	    if (relationFlag1 == 1)
+	    {
+		    expr2[0].type2 = new AttrType(AttrType.attrSymbol);
+		    relationFlag1 = 0;
+		    expr2[0].operand2.symbol = new FldSpec (new RelSpec(RelSpec.outer),joincol22);
+	    }
+	    else
+	    {
+	    	
+	    	expr2[0].type2 = new AttrType(AttrType.attrInteger);
+	    	expr2[0].operand2.integer = joincol22;
+	    }
+	 
+	    expr2[1] = null;
+	  }
+  private void query1b_CondExpr(CondExpr[] expr,CondExpr[] expr2) {
+
+    expr[0].next  = null;
+    if(condition_code == 1)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopLT);
+    else if(condition_code == 2)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopLE);
+    else if(condition_code == 3)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopGE);
+    else if(condition_code == 4)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopGT);
+    expr[0].type1 = new AttrType(AttrType.attrSymbol);
+    expr[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),joincol1);
+
+    if (relationFlag == 1)
+    {
+	    expr[0].type2 = new AttrType(AttrType.attrSymbol);
+	    relationFlag = 0;
+	    expr[0].operand2.symbol = new FldSpec (new RelSpec(RelSpec.outer),joincol2);
+    }
+    else
+    {
+    	
+    	expr[0].type2 = new AttrType(AttrType.attrInteger);
+    	expr[0].operand2.integer = joincol2;
+    }
+    
+
+    if(condition_code2 == 1)
+    	expr[1].op    = new AttrOperator(AttrOperator.aopLT);
+    else if(condition_code2 == 2)
+    	expr[1].op    = new AttrOperator(AttrOperator.aopLE);
+    else if(condition_code2 == 3)
+    	expr[1].op    = new AttrOperator(AttrOperator.aopGE);
+    else if(condition_code2 == 4)
+    	expr[1].op    = new AttrOperator(AttrOperator.aopGT);
+    expr2[0].next  = null;
+    expr2[0].type1 = new AttrType(AttrType.attrSymbol);
+
+    expr2[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),joincol21);
+    if (relationFlag1 == 1)
+    {
+	    expr2[0].type2 = new AttrType(AttrType.attrSymbol);
+	    relationFlag1 = 0;
+	    expr2[0].operand2.symbol = new FldSpec (new RelSpec(RelSpec.outer),joincol22);
+    }
+    else
+    {
+    	
+    	expr2[0].type2 = new AttrType(AttrType.attrInteger);
+    	expr2[0].operand2.integer = joincol22;
+    }
+ 
+    expr2[1] = null;
+  }
+
+
+  private void query1a_CondExpr(CondExpr[] expr) {
+
+    expr[0].next  = null;
+    if(condition_code == 1)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopLT);
+    else if(condition_code == 2)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopLE);
+    else if(condition_code == 3)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopGE);
+    else if(condition_code == 4)
+    	expr[0].op    = new AttrOperator(AttrOperator.aopGT);
+    expr[0].type1 = new AttrType(AttrType.attrSymbol);
+    expr[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),joincol1);
+    if (relationFlag == 1)
+    {
+	    expr[0].type2 = new AttrType(AttrType.attrSymbol);
+	    relationFlag = 0;
+	    expr[0].operand2.symbol = new FldSpec (new RelSpec(RelSpec.outer),joincol2);
+    }
+    else
+    {
+    	
+    	expr[0].type2 = new AttrType(AttrType.attrInteger);
+    	expr[0].operand2.integer = joincol2;
+    }
+    
+    expr[1] = null;
+  }
+
+
+
+  public void Query1b() {
+    
+    System.out.print("**********************Query1 starting *********************\n");
+    boolean status = OK;
+    
+    String line,line2,line3,line4,line5;
+
+	
+	
+
+	String filename = "/home/pratik/workspace3/Project/src/query_1b.txt";
+//	ArrayList<Sailor> sailors  = new ArrayList<Sailor>();
+	//boats    = new Vector();
+	//reserves = new Vector();
+	try
+	{
+ 	BufferedReader br = new BufferedReader(new FileReader(filename));
+  	
+  	line = br.readLine();
+  	
+    	String arr[]=line.split(" ");
+	
+	projcol1=Integer.parseInt(arr[0].substring(arr[0].indexOf("_")+1));
+	projcol2=Integer.parseInt(arr[1].substring(arr[1].indexOf("_")+1));
+	
+	line2=br.readLine();
+	String arr2[]=line2.split(" ");
+	
+	table1=arr2[0];
+	table2=arr2[1];
+	line3=br.readLine();
+	String arr3[]=line3.split(" ");
+	
+	joincol1=Integer.parseInt(arr3[0].substring(arr3[0].indexOf("_")+1));
+	condition_code=Integer.parseInt(arr3[1]);
+	if(arr3[2].contains("_"))
+	   	{
+	   	joincol2=Integer.parseInt(arr3[2].substring(arr3[2].indexOf("_")+1));
+	   	relationFlag = 1;
+	   	}
+	   	else{
+	   	joincol2 = Integer.parseInt(arr3[2]);
+	   	}
+
+	line4=br.readLine();
+	condition=line4;
+
+	line5=br.readLine();
+	String arr5[]=line5.split(" ");
+	joincol21=Integer.parseInt(arr5[0].substring(arr5[0].indexOf("_")+1));
+	condition_code2=Integer.parseInt(arr5[1]);
+
+	if(arr5[2].contains("_"))
+	   	{
+	   	joincol22=Integer.parseInt(arr5[2].substring(arr5[2].indexOf("_")+1));
+	   	relationFlag1 = 1;
+	   	}
+	   	else{
+	   	joincol22 = Integer.parseInt(arr5[2]);
+	   	
+	   	}
+
+
+  	
+  	br.close();
+  	System.out.println(projcol1+" "+projcol2+" "+table1+" "+table2+" "+joincol1+" "+condition_code+" "+joincol2);
+  	System.out.println(condition);
+  	System.out.println(joincol21+" "+condition_code2+" "+joincol22);
+	}
+	catch(Exception e)
+	{
+  	e.printStackTrace();
+	}
+	
+
+    CondExpr[] outFilter = new CondExpr[3];
+    outFilter[0] = new CondExpr();
+    outFilter[1] = new CondExpr();
+    outFilter[2] = new CondExpr();
+ 
+    CondExpr[] outFilter2 = new CondExpr[3];
+    outFilter2[0] = new CondExpr();
+    outFilter2[1] = new CondExpr();
+    outFilter2[2] = new CondExpr();
+    
+    query1b_CondExpr(outFilter,outFilter2);
+   // query1b2_CondExpr(outFilter2);
+    Tuple t = new Tuple();
+    //CHANGES HERE
+    AttrType [] Stypes = new AttrType[4];
+    Stypes[0] = new AttrType (AttrType.attrInteger);
+    Stypes[1] = new AttrType (AttrType.attrInteger);
+    Stypes[2] = new AttrType (AttrType.attrInteger);
+    Stypes[3] = new AttrType (AttrType.attrInteger);
+
+    //SOS
+    short [] Ssizes = new short[1];
+    Ssizes[0] = 30; //first elt. is 30
+    
+    FldSpec [] Sprojection = new FldSpec[4];
+    Sprojection[0] = new FldSpec(new RelSpec(RelSpec.outer), 1);
+    Sprojection[1] = new FldSpec(new RelSpec(RelSpec.outer), 2);
+    Sprojection[2] = new FldSpec(new RelSpec(RelSpec.outer), 3);
+    Sprojection[3] = new FldSpec(new RelSpec(RelSpec.outer), 4);
+
+    CondExpr [] selects = new CondExpr [1];
+    selects = null;
+    
+ 
+    FileScan am = null;
+    try {
+      am  = new FileScan("sailors.in", Stypes, Ssizes, 
+	  (short)4, (short)4,
+	  Sprojection, null);
+    }
+    catch (Exception e) {
+      status = FAIL;
+      System.err.println (""+e);
+    }
+
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error setting up scan for sailors");
+      Runtime.getRuntime().exit(1);
+    }
+    //CHANGES HERE
+    AttrType [] Rtypes = new AttrType[4];
+    Rtypes[0] = new AttrType (AttrType.attrInteger);
+    Rtypes[1] = new AttrType (AttrType.attrInteger);
+    Rtypes[2] = new AttrType (AttrType.attrInteger);
+    Rtypes[3] = new AttrType (AttrType.attrInteger);
+
+    short [] Rsizes = new short[1];
+    Rsizes[0] = 15; 
+    FldSpec [] Rprojection = new FldSpec[4];
+    Rprojection[0] = new FldSpec(new RelSpec(RelSpec.outer), 1);
+    Rprojection[1] = new FldSpec(new RelSpec(RelSpec.outer), 2);
+    Rprojection[2] = new FldSpec(new RelSpec(RelSpec.outer), 3);
+    Rprojection[3] = new FldSpec(new RelSpec(RelSpec.outer), 4);
+ 
+    FileScan am2 = null;
+    try {
+      am2 = new FileScan("reserves.in", Rtypes, Rsizes, 
+	  (short)3, (short) 3,
+	  Rprojection, null);
+    }
+    catch (Exception e) {
+      status = FAIL;
+      System.err.println (""+e);
+    }
+
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error setting up scan for reserves");
+      Runtime.getRuntime().exit(1);
+    }
+   
+    //proj_list means what we want to show in the output(This comes from first line of query file)
+    FldSpec [] proj_list = new FldSpec[2];
+    proj_list[0] = new FldSpec(new RelSpec(RelSpec.innerRel), projcol1);
+    proj_list[1] = new FldSpec(new RelSpec(RelSpec.outer), projcol2);
+
+    AttrType [] jtype = new AttrType[2];
+    //CHANGES HERE
+    //THIS IS THE TYPE OF proj_list values
+    jtype[0] = new AttrType (AttrType.attrInteger);
+    jtype[1] = new AttrType (AttrType.attrInteger);
+ 
+    TupleOrder ascending = new TupleOrder(TupleOrder.Ascending);
+    /*SortMerge sm = null;
+    try {
+      sm = new SortMerge(Stypes, 4, Ssizes,
+	 Rtypes, 3, Rsizes,
+	 1, 4, 
+	 1, 4, 
+	 10,
+	 am, am2, 
+	 false, false, ascending,
+	 outFilter, proj_list, 2);
+    }*/
+    NestedLoopsJoins sm = null;
+    try {
+      sm = new NestedLoopsJoins (Stypes, 4, Ssizes,
+	  Rtypes, 4, Rsizes,
+	  10,
+	  am, "reserves.in",
+	  outFilter, null, proj_list, 2);
+    }
+    catch (Exception e) {
+      System.err.println("*** join error in SortMerge constructor ***"); 
+      status = FAIL;
+      System.err.println (""+e);
+      e.printStackTrace();
+    }
+
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error constructing SortMerge");
+      Runtime.getRuntime().exit(1);
+    }
+
+    NestedLoopsJoins sm1 = null;
+    try {
+      sm1 = new NestedLoopsJoins (Stypes, 4, Ssizes,
+	  Rtypes, 4, Rsizes,
+	  10,
+	  am, "reserves.in",
+	  outFilter2, null, proj_list, 2);
+    }
+    catch (Exception e) {
+      System.err.println("*** join error in SortMerge constructor ***"); 
+      status = FAIL;
+      System.err.println (""+e);
+      e.printStackTrace();
+    }
+
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error constructing SortMerge");
+      Runtime.getRuntime().exit(1);
+    }
+ 
+    //QueryCheck qcheck1 = new QueryCheck(1);
+ 
+   
+    t = null;
+ 
+    try {
+      while ((t = sm.get_next()) != null) {
+        t.print(jtype);
+
+        //qcheck1.Check(t);
+      }
+    }
+    catch (Exception e) {
+      System.err.println (""+e);
+       e.printStackTrace();
+       status = FAIL;
+    }
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error in get next tuple ");
+      Runtime.getRuntime().exit(1);
+    }
+    
+    //qcheck1.report(1);
+    try {
+      sm.close();
+    }
+    catch (Exception e) {
+      status = FAIL;
+      e.printStackTrace();
+    }
+    System.out.println ("\n"); 
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error in closing ");
+      Runtime.getRuntime().exit(1);
+    }
+  }
+  
+
+
+   public void Query1a() {
+    System.out.print("**********************Query1a strating *********************\n"); 
+    boolean status = OK;
+
+    
+    String line,line2,line3;
+   	String filename = "/home/pratik/workspace3/Project/src/query_1a.txt";
+
+   	try
+   	{
+   	BufferedReader br = new BufferedReader(new FileReader(filename));
+   	
+   	line = br.readLine();
+   	
+   	String arr[]=line.split(" ");
+   	
+   	projcol1=Integer.parseInt(arr[0].substring(arr[0].indexOf("_")+1));
+   	projcol2=Integer.parseInt(arr[1].substring(arr[1].indexOf("_")+1));
+   	
+   	line2=br.readLine();
+   	String arr2[]=line2.split(" ");
+   	
+   	table1=arr2[0];
+   	table2=arr2[1];
+   	line3=br.readLine();
+   	String arr3[]=line3.split(" ");
+   	
+   	joincol1=Integer.parseInt(arr3[0].substring(arr3[0].indexOf("_")+1));
+   	condition_code=Integer.parseInt(arr3[1]);
+   	if(arr3[2].contains("_"))
+   	{
+   	joincol2=Integer.parseInt(arr3[2].substring(arr3[2].indexOf("_")+1));
+   	relationFlag = 1;
+   	}
+   	else{
+   	joincol2 = Integer.parseInt(arr3[2]);
+   	}
+
+   	
+   	br.close();
+   	System.out.println(projcol1+" "+projcol2+" "+table1+" "+table2+" "+joincol1+" "+condition_code+" "+joincol2);
+   	}
+   	catch(Exception e)
+   	{
+   	e.printStackTrace();
+   	}
+    CondExpr [] outFilter = new CondExpr[2];
+    outFilter[0] = new CondExpr();
+    outFilter[1] = new CondExpr();
+ 
+    query1a_CondExpr(outFilter);
+ 
+    Tuple t = new Tuple();
+    t = null;
+ 
+    AttrType Stypes[] = {
+      new AttrType(AttrType.attrInteger),
+      new AttrType(AttrType.attrInteger),
+      new AttrType(AttrType.attrInteger),
+      new AttrType(AttrType.attrInteger)
+    };
+    short []   Ssizes = new short[1];
+    Ssizes[0] = 30;
+
+    AttrType [] Rtypes = {
+      new AttrType(AttrType.attrInteger),
+      new AttrType(AttrType.attrInteger),
+      new AttrType(AttrType.attrInteger),
+      new AttrType(AttrType.attrInteger)
+    };
+    short  []  Rsizes = new short[1];
+    Rsizes[0] =15;
+ 
+    FldSpec [] Sprojection = {
+       new FldSpec(new RelSpec(RelSpec.outer), 1),
+       new FldSpec(new RelSpec(RelSpec.outer), 2),
+       new FldSpec(new RelSpec(RelSpec.outer), 3),
+       new FldSpec(new RelSpec(RelSpec.outer), 4)
+    };
+
+    CondExpr[] selects = new CondExpr [1];
+    selects = null;
+ 
+    iterator.Iterator am = null;
+    try {
+      am  = new FileScan("sailors.in", Stypes, Ssizes,
+	  (short)4, (short) 4,
+	  Sprojection, null);
+    }
+    catch (Exception e) {
+      status = FAIL;
+      System.err.println (""+e);
+    }
+ 
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error setting up scan for sailors");
+      Runtime.getRuntime().exit(1);
+    }
+
+    FldSpec [] Rprojection = {
+       new FldSpec(new RelSpec(RelSpec.outer), 1),
+       new FldSpec(new RelSpec(RelSpec.outer), 2),
+       new FldSpec(new RelSpec(RelSpec.outer), 3),
+       new FldSpec(new RelSpec(RelSpec.outer), 4)
+    }; 
+ 
+    iterator.Iterator am2 = null;
+    try {
+      am2 = new FileScan("reserves.in", Rtypes, Rsizes, 
+	  (short)4, (short)4,
+	  Rprojection, null);
+    }
+    catch (Exception e) {
+      status = FAIL;
+      System.err.println (""+e);
+    }
+    
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error setting up scan for reserves");
+      Runtime.getRuntime().exit(1);
+    }
+
+    FldSpec [] proj_list = {
+      new FldSpec(new RelSpec(RelSpec.innerRel), projcol1),
+      new FldSpec(new RelSpec(RelSpec.outer), projcol2)
+    };
+
+    AttrType [] jtype     = { new AttrType(AttrType.attrInteger),
+    	new AttrType(AttrType.attrInteger)};
+ 
+    TupleOrder ascending = new TupleOrder(TupleOrder.Ascending);
+   /* SortMerge sm = null;
+    try {
+      sm = new SortMerge(Stypes, 4, Ssizes,
+	 Rtypes, 3, Rsizes,
+	 1, 4,
+	 1, 4,
+	 10,
+	 am, am2,
+	 false, false, ascending,
+	 outFilter, proj_list, 1);
+    }*/
+    NestedLoopsJoins sm = null;
+    try {
+      sm = new NestedLoopsJoins (Stypes, 4, Ssizes,
+	  Rtypes, 4, Rsizes,
+	  100,
+	  am, "reserves.in",
+	  outFilter, null, proj_list, 2);
+    }
+    catch (Exception e) {
+      status = FAIL;
+      System.err.println (""+e);
+    }
+ 
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error constructing SortMerge");
+      Runtime.getRuntime().exit(1);
+    }
+ 
+    //QueryCheck qcheck3 = new QueryCheck(3);
+ 
+   
+    t = null;
+ 
+    try {
+      while ((t = sm.get_next()) != null) {
+        t.print(jtype);
+       // qcheck3.Check(t);
+      }
+    }
+    catch (Exception e) {
+      System.err.println (""+e);
+      e.printStackTrace();
+       Runtime.getRuntime().exit(1);
+    }
+ 
+ 
+   // qcheck3.report(3);
+ 
+    System.out.println ("\n"); 
+    try {
+      sm.close();
+    }
+    catch (Exception e) {
+      status = FAIL;
+      e.printStackTrace();
+    }
+    
+    if (status != OK) {
+      //bail out
+      System.err.println ("*** Error setting up scan for sailors");
+      Runtime.getRuntime().exit(1);
+    }
+  }
+
+  
+  
+  private void Disclaimer() {
+    System.out.print ("\n\nAny resemblance of persons in this database to"
+         + " people living or dead\nis purely coincidental. The contents of "
+         + "this database do not reflect\nthe views of the University,"
+         + " the Computer  Sciences Department or the\n"
+         + "developers...\n\n");
+  }
+}
+
+public class JoinTest
+{
+  public static void main(String argv[])
+  {
+    boolean sortstatus;
+    //SystemDefs global = new SystemDefs("bingjiedb", 100, 70, null);
+    //JavabaseDB.openDB("/tmp/nwangdb", 5000);
+
+    JoinsDriver jjoin = new JoinsDriver();
+
+    sortstatus = jjoin.runTests();
+    if (sortstatus != true) {
+      System.out.println("Error ocurred during join tests");
+    }
+    else {
+      System.out.println("join tests completed successfully");
+    }
+  }
+}

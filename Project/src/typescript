@@ -1,0 +1,277 @@
+Script started on Tue 23 Feb 2016 09:42:17 PM MST
+[0;37m[0;35m[0;35mpratik@Dell-System-XPS-L502X[0;37m:[0;36m~/Desktop/minjava/javaminibase/src >[0;00m make tests
+make: Nothing to be done for `tests'.
+[0;37m[0;35m[0;35mpratik@Dell-System-XPS-L502X[0;37m:[0;36m~/Desktop/minjava/javaminibase/src >[0;00m make test
+cd tests; make bmtest2 dbtest; whoami; make hftest bttest indextest
+make[1]: Entering directory `/home/pratik/Desktop/minjava/javaminibase/src/tests'
+/usr/lib/jvm/java-7-openjdk-amd64/bin/javac -classpath .:.. TestDriver.java BMTest2.java
+/usr/lib/jvm/java-7-openjdk-amd64/bin/java  -classpath .:.. tests.BMTest2
+
+Running Buffer Management tests....
+Replacer: LRUK
+
+
+  Test 1 does simple test on buffer using theFIFOalgorithmmanager operations:
+Replacer: FIFO
+
+  - Allocate a bunch of new pages
+  - Write something on each one
+  - Read that something back from each one
+   (because we're buffering, this is where most of the writes happen)
+  - Free the pages again
+  Test 1 completed successfully.
+
+  Test 1 does simple test on buffer using theLIFOalgorithmmanager operations:
+Replacer: LIFO
+
+  - Allocate a bunch of new pages
+  - Write something on each one
+  - Read that something back from each one
+   (because we're buffering, this is where most of the writes happen)
+  - Free the pages again
+  Test 1 completed successfully.
+
+  Test 1 does simple test on buffer using theLRUKalgorithmmanager operations:
+Replacer: LRUK
+
+  - Allocate a bunch of new pages
+  - Write something on each one
+  - Read that something back from each one
+   (because we're buffering, this is where most of the writes happen)
+  - Free the pages again
+  Test 1 completed successfully.
+
+  Test 2 exercises some illegal buffer manager operations:FIFO
+Replacer: FIFO
+
+  - Try to pin more pages than there are frames
+*** Pinning too many pages
+  --> Failed as expected 
+
+  - Try to free a doubly-pinned page
+*** Freeing a pinned page
+  --> Failed as expected 
+
+  - Try to unpin a page not in the buffer pool
+*** Unpinning a page not in the buffer pool
+  --> Failed as expected 
+
+  Test 2 completed successfully.
+
+  Test 2 exercises some illegal buffer manager operations:LIFO
+Replacer: LIFO
+
+  - Try to pin more pages than there are frames
+*** Pinning too many pages
+  --> Failed as expected 
+
+  - Try to free a doubly-pinned page
+*** Freeing a pinned page
+  --> Failed as expected 
+
+  - Try to unpin a page not in the buffer pool
+*** Unpinning a page not in the buffer pool
+  --> Failed as expected 
+
+  Test 2 completed successfully.
+
+  Test 2 exercises some illegal buffer manager operations:LRUK
+Replacer: LRUK
+
+  - Try to pin more pages than there are frames
+*** Pinning too many pages
+  --> Failed as expected 
+
+  - Try to free a doubly-pinned page
+*** Freeing a pinned page
+  --> Failed as expected 
+
+  - Try to unpin a page not in the buffer pool
+*** Unpinning a page not in the buffer pool
+  --> Failed as expected 
+
+  Test 2 completed successfully.
+
+  Test 3 exercises some of the internals of the buffer managerFIFO
+Replacer: FIFO
+
+  - Allocate and dirty some new pages, one at a time, and leave some pinned
+  - Read the pages
+  Test 3 completed successfully.
+
+  Test 3 exercises some of the internals of the buffer managerLIFO
+Replacer: LIFO
+
+  - Allocate and dirty some new pages, one at a time, and leave some pinned
+  - Read the pages
+  Test 3 completed successfully.
+
+  Test 3 exercises some of the internals of the buffer managerLRUK
+Replacer: LRUK
+
+  - Allocate and dirty some new pages, one at a time, and leave some pinned
+  - Read the pages
+  Test 3 completed successfully.
+
+  Test 4 
+Replacer: LRUK
+
+- Read the pages
+  Test 4 completed successfully.
+
+...Buffer Management tests completely successfully.
+
+/usr/lib/jvm/java-7-openjdk-amd64/bin/javac -classpath .:.. TestDriver.java DBTest.java
+/usr/lib/jvm/java-7-openjdk-amd64/bin/java  -classpath .:.. tests.DBTest
+
+Running Disk Space Management tests....
+
+Replacer:Unknown
+
+
+  Test 1 creates a new database and does some tests of normal operations:
+  - Add some file entries
+  - Allocate a run of pages
+  - Write something on some of them
+  - Deallocate the rest of them
+  Test 1 completed successfully.
+
+  Test 2 opens the database created in test 1 and does some further tests:
+  - Delete some of the file entries
+  - Look up file entries that should still be there
+  - Read stuff back from pages we wrote in test 1
+  Test 2 completed successfully.
+
+  Test 3 tests for some error conditions:
+  - Look up a deleted file entry
+**** Looking up a deleted file entry
+  --> Failed as expected 
+
+  - Try to delete a deleted entry again
+**** Delete a deleted file entry again
+  --> Failed as expected 
+
+  - Try to delete a nonexistent file entry
+**** Deleting a nonexistent file entry
+  --> Failed as expected 
+
+  - Look up a nonexistent file entry
+**** Looking up a nonexistent file entry
+  --> Failed as expected 
+
+  - Try to add a file entry that's already there
+**** Adding a duplicate file entry
+  --> Failed as expected 
+
+  - Try to add a file entry whose name is too long
+**** Adding a file entry with too long a name
+  --> Failed as expected 
+
+  - Try to allocate a run of pages that's too long 
+**** Allocating a run that's too long
+  --> Failed as expected 
+
+  - Try to allocate a negative run of pages 
+**** Allocating a negative run
+  --> Failed as expected 
+
+  - Try to deallocate a negative run of pages 
+**** Deallocating a negative run
+  --> Failed as expected 
+
+  Test 3 completed successfully.
+
+  Test 4 tests some boundary conditions.
+    (These tests are very implementation-specific.)
+  - Make sure no pages are pinned
+  - Allocate all pages remaining after DB overhead is accounted for
+  - Attempt to allocate one more page
+**** Allocating one additional page
+  --> Failed as expected 
+
+  - Free some of the allocated pages
+  - Allocate some of the just-freed pages
+  - Free two continued run of the allocated pages
+  - Allocate back number of pages equal to the just freed pages
+
+  - Add enough file entries that the directory must surpass a page
+  - Make sure that the directory has taken up an extra page: try to
+    allocate more pages than should be available
+**** Allocating more pages than are now available
+   --> Failed as expected 
+
+  - At this point, all pages should be claimed.  Try to allocateone more.
+**** Allocating one more page than there is
+   --> Failed as expected 
+
+  - Free the last two pages: this tests a boundary condition in the space map.
+  Test 4 completed successfully.
+
+...Disk Space Management tests completely successfully.
+
+make[1]: Leaving directory `/home/pratik/Desktop/minjava/javaminibase/src/tests'
+pratik
+make[1]: Entering directory `/home/pratik/Desktop/minjava/javaminibase/src/tests'
+/usr/lib/jvm/java-7-openjdk-amd64/bin/javac -classpath .:.. TestDriver.java HFTest.java
+/usr/lib/jvm/java-7-openjdk-amd64/bin/java  -classpath .:.. tests.HFTest
+
+Running Heap File tests....
+
+Replacer:Unknown
+
+
+  Test 1: Insert and scan fixed-size records
+
+  - Create a heap file
+
+  - Add 100 records to the file
+
+  - Scan the records just inserted
+
+  Test 1 completed successfully.
+
+
+  Test 2: Delete fixed-size records
+
+  - Open the same heap file as test 1
+
+  - Delete half the records
+
+  - Scan the remaining records
+
+  Test 2 completed successfully.
+
+
+  Test 3: Update fixed-size records
+
+  - Open the same heap file as tests 1 and 2
+
+  - Change the records
+
+  - Check that the updates are really there
+
+  Test 3 completed successfully.
+
+
+  Test 4: Test some error conditions
+
+  - Try to change the size of a record
+
+**** Shortening a record
+  --> Failed as expected 
+
+**** Lengthening a record
+  --> Failed as expected 
+
+  - Try to insert a record that's too long
+
+**** Inserting a too-long record
+  --> Failed as expected 
+
+  Test 4 completed successfully.
+
+
+...Heap File tests completely successfully.
+
+/usr/lib/jvm/java-7-openjdk-amd64/bin/javac -classpath .:.. TestDriver.java BTTest.java
+/usr
